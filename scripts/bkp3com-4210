@@ -140,12 +140,12 @@ for switch in "$@"; do
     fi
   fi
   if $do_backup; then
-		if [ -z $domain ]; then
-			fqdn="$switch"
-		else
-			fqdn="${switch}.${domain}"
-		fi
-		echo "$tag: info: backing up ${fqdn} to ${dir}";
+    if [ -z $domain ]; then
+      fqdn="$switch"
+    else
+      fqdn="${switch}.${domain}"
+    fi
+    echo "$tag: info: backing up ${fqdn} to ${dir}";
     (cd $dir && echo "$sftpbatch" | $SFTP ${fqdn} && chmod -R g-rwx,o-rwx $dir);
   fi
 done
@@ -155,11 +155,11 @@ echo "$tag: info: commiting changes in $repodir";
 if (cd $repodir && $GIT add --all && $GIT commit -m "backup by $script ($thetime)"); then
   echo "$tag: info: done";
 else
-	if [ ! -z "`(cd $repodir 2>&1 >/dev/null && $GIT status -s)`" ]; then
-		# failure, because we still have uncommitted data
-  	echo "$tag: error: failed to commit changes in $repodir" >&2;
-	else
-		# success, because we had nothing to commit ...
-		true;
-	fi
+  if [ ! -z "`(cd $repodir 2>&1 >/dev/null && $GIT status -s)`" ]; then
+    # failure, because we still have uncommitted data
+    echo "$tag: error: failed to commit changes in $repodir" >&2;
+  else
+    # success, because we had nothing to commit ...
+    true;
+  fi
 fi
