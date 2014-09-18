@@ -6,11 +6,12 @@ Simple scripts to auto-backup configuration of the old 3com switches.
 How does it work
 ----------------
 
-The hardware setup consists of a **backup server** and one or more
-**switches**. The backup server runs backup scripts periodically, and the
-scripts download current configuration from switches. The configuration is
-stored in a git repository on server. Each script commits last changes
-at the end of its job.
+The hardware infrastructure consists of a **backup server** and one or more
+**switches**. The backup server runs predefined backup scripts periodically.
+Each script downloads current configuration from one or more devices. The
+configuration is then stored in a git repository on the server (the git repo is
+created automatically on first run). At the end of backup, the script commits
+changes done to the git repository. That's the whole story.
 
 Supported devices
 -----------------
