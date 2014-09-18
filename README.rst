@@ -69,7 +69,17 @@ Initial configuration
 #. Perform necessary **Preparations** for your switches (see the section
    **Preparations** below).
 #. Write a cron job (e.g. ``/etc/cron.daily/bkp3com`` to run backup scripts
-   with appropriate options).
+   with appropriate options). In my installation I have something like this,
+   for example::
+
+        DOMAIN="mgmt.meil.pw.edu.pl"
+        BKP3COM="/usr/local/bin/bkp3com-4210"
+        SWITCHES="sw-01 sw-02 sw-03 sw-04"
+        REPONAME=daily
+        su - bkp3com -c "$BKP3COM -r $REPONAME -d $DOMAIN $SWITCHES"
+
+   The whole backup is being stored under ``/home/bkp3com/daily/`` (its the
+   path of the repo root).
 
 Usage
 -----
