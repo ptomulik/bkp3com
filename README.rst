@@ -68,7 +68,7 @@ Initial configuration
 
 #. Perform necessary **Preparations** for your switches (see the section
    **Preparations** below).
-#. Write a cron job (etc. ``/etc/cron.daily/bkp3com`` to run backup scripts
+#. Write a cron job (e.g. ``/etc/cron.daily/bkp3com`` to run backup scripts
    with appropriate options).
 
 Usage
@@ -100,7 +100,7 @@ be provided via ``-r`` option, e.g.::
 
     bkp3com-4210 -r /home/bkp3com/daily -d mgmt.example.com sw-01 sw-02
 
-The configuration for switches is stored in subdirectories named after the
+The configuration files will be written-out to subdirectories named after the
 switch names, in our last example::
 
     /home/bkp3com/daily/sw-01/
