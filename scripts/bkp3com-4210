@@ -13,7 +13,7 @@ SFTP='/usr/bin/sftp'
 GIT='/usr/bin/git'
 
 print_help() {
-  echo "Usage: $script [-h] [-f f1,[f2,[...]]] [-o dir] [-d domain] s1 [s2 [...]]";
+  echo "Usage: $script [-h] [-f f1,[f2,[...]]] [-r repodir] [-d domain] s1 [s2 [...]]";
   echo "Options:";
   echo "      -h                print help and exit";
   echo "      -f f1[,f2[,...]]  files on the switch to be backed up";
