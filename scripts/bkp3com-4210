@@ -1,0 +1,164 @@
+#! /bin/sh
+
+
+script=`basename $0`;
+tag=$script;
+is_ok=true;
+repodir=`readlink -f ~/bkp3com`;
+domain="";
+declare -a files;
+files=("3comoscfg.cfg");
+thetime=`date "+%F %H:%M:%S"`;
+SFTP='/usr/bin/sftp'
+GIT='/usr/bin/git'
+
+print_help() {
+  echo "Usage: $script [-h] [-f f1,[f2,[...]]] [-o dir] [-d domain] s1 [s2 [...]]";
+  echo "Options:";
+  echo "      -h                print help and exit";
+  echo "      -f f1[,f2[,...]]  files on the switch to be backed up";
+  echo "      -r repodir        use the specified repository";
+  echo "      -d domain         domain name to be appended to switch address";
+  echo "      s1 [s2 [...]]     switch addresses (IPs or host names)";
+  echo "Defaults:";
+  echo "      f1[,f2,[...]]     ${files[@]}";
+  echo "      repodir           \"$repodir\"";
+  echo "      domain            \"$domain\"";
+}
+
+while getopts "hf:d:r:" opt; do
+  case $opt in
+    f)
+      { old_IFS=$IFS; IFS=','; files=(${OPTARG}); IFS=$old_IFS; }
+      ;;
+    d)
+      part='[a-zA-Z0-9]\([a-zA-Z0-9-]\{0,61\}[a-zA-Z0-9]\)\?';
+      if echo $OPTARG | grep -e "^\(${part}\.\)*${part}\$" 2>&2 >/dev/null; then
+        true;
+      else
+        echo "$tag: error: invalid domain name \"$OPTARG\"";
+        is_ok=false;
+      fi
+      domain=$OPTARG;
+      ;;
+    r)
+      repodir=`readlink -f "$OPTARG"`;
+      ;;
+    h)
+      print_help;
+      exit 0;
+      ;;
+    \?)
+      print_help >&2;
+      is_ok=false;
+      ;;
+  esac
+done
+
+if $is_ok; then
+  # move on to the next argument (remove options)
+  shift $((OPTIND-1))
+  if [ $# -lt 1 ]; then
+    echo "$tag: error: wrong number of arguments ($#)" >&2;
+    print_help >&2;
+    is_ok=false;
+  fi
+fi
+
+if $is_ok; then
+  # Check if the output directory exists, if not - try to create
+  if [ ! -e "$repodir" ]; then
+    echo "$tag: info: directory $repodir does not exist, creating";
+    if mkdir -p "$repodir"; then
+      repodir=$repodir;
+      echo "$tag: info: done";
+    else
+      echo "$tag: error: failed to create directory \"$repodir\"" >&2;
+    fi
+  else
+    if [ ! -d "$repodir" ]; then
+      echo "$tag: error: $repodir is not a directory" >&2;
+      is_ok=false;
+    else
+      repodir=$repodir;
+    fi
+  fi
+fi
+
+if $is_ok; then
+  # Check if there is a git repository in the output directory
+  # if not - try to create
+  if [ ! -e "$repodir/.git" ]; then
+    echo "$tag: info: git repository in \"$repodir\" does not exist, creating";
+    if (cd "$repodir" && $GIT init); then
+      true;
+      echo "$tag: info: done";
+    else
+      echo "$tag: error: failed to initialize git repository \"$repodir\"" >&2;
+      is_ok=false;
+    fi
+  else
+    if [ ! -d "$repodir/.git" ]; then
+      echo "$tag: error: "$repodir/.git" is not a directory" >&2;
+      is_ok=false;
+    fi
+  fi
+fi
+
+$is_ok || exit 1;
+
+# Check if we have something to commit in the repo
+if [ ! -z "`(cd $repodir 2>&1 >/dev/null && $GIT status -s)`" ]; then
+  echo "$tag: info: detected uncommitted data in \"$repodir\", will try to commit";
+  # try to commit uncommitted changes to not override them
+  if (cd $repodir && $GIT add --all && $GIT commit -m "commit uncommitted backup ($thetime)";); then
+    echo "$tag: info: done";
+  else
+    echo "$tag: warn: failed to commit in \"$repodir\"";
+  fi
+fi
+
+# Write batch script for sftp
+sftpbatch="$(for F in ${files[@]}; do echo "get \"$F\""; done; echo "quit";)";
+
+for switch in "$@"; do
+  do_backup=true
+  dir="${repodir}/${switch}";
+  if [ ! -e "$dir" ]; then
+    echo "$tag: info: directory \"$dir\" does not exist, creating";
+    if mkdir $dir; then
+      echo "$tag: info: done";
+    else
+      echo "$tag: error: failed to create \"$dir\"" >&2;
+      do_backup=false;
+    fi
+  else
+    if [ ! -d "$dir" ]; then
+      echo "$tag: error: \"$dir\" is not a directory" >&2;
+      do_backup=false;
+    fi
+  fi
+  if $do_backup; then
+		if [ -z $domain ]; then
+			fqdn="$switch"
+		else
+			fqdn="${switch}.${domain}"
+		fi
+		echo "$tag: info: backing up ${fqdn} to ${dir}";
+    (cd $dir && echo "$sftpbatch" | $SFTP ${fqdn} && chmod -R g-rwx,o-rwx $dir);
+  fi
+done
+
+# Commit changes
+echo "$tag: info: commiting changes in $repodir";
+if (cd $repodir && $GIT add --all && $GIT commit -m "backup by $script ($thetime)"); then
+  echo "$tag: info: done";
+else
+	if [ ! -z "`(cd $repodir 2>&1 >/dev/null && $GIT status -s)`" ]; then
+		# failure, because we still have uncommitted data
+  	echo "$tag: error: failed to commit changes in $repodir" >&2;
+	else
+		# success, because we had nothing to commit ...
+		true;
+	fi
+fi
