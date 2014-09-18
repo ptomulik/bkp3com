@@ -74,6 +74,7 @@ if $is_ok; then
       echo "$tag: info: done";
     else
       echo "$tag: error: failed to create directory \"$repodir\"" >&2;
+      is_ok=false;
     fi
   else
     if [ ! -d "$repodir" ]; then
